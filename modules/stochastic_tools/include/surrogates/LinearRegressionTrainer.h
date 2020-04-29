@@ -16,7 +16,7 @@ class vec;
 }
 */
 
-#include "mlpack/core.hpp"
+//#include "mlpack/core.hpp"
 
 #include "SurrogateTrainer.h"
 
@@ -25,26 +25,22 @@ class LinearRegressionTrainer : public SurrogateTrainer
 public:
   static InputParameters validParams();
   LinearRegressionTrainer(const InputParameters & parameters);
-  virtual void initialSetup() override;
-  virtual void initialize() override;
   virtual void execute() override;
-  virtual void finalize() override;
-
-protected:
-  /// Map containing sample points and the results
-  // std::vector<std::vector<Real>> & _sample_points;
 
 private:
-  /// Sampler from which the parameters were perturbed
-  // Sampler * _sampler = nullptr;
+  /// Helper for performing optional error checking prior to training
+  void errorCheckHelper() const;
 
   ///@{
   /// VPP training data
-  const arma::vec _dependent_variable;
-  // const VectorPostprocessorValue & _independent_variable;
+  const VectorPostprocessorValue & _independent_variable;
   const VectorPostprocessorValue & _dependent_variable;
   ///@}
 
-  /// True when _sampler data is distributed
-  // bool _values_distributed = false; // default to false; set in initialSetup
+  // The desired warnings to produce during training
+  const MultiMooseEnum & _errors;
+
+  // Storage for the trained data (slope/intercept for a linear equation)
+  Real & _slope;
+  Real & _intercept;
 };

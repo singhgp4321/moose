@@ -18,6 +18,7 @@
     input_vpp = old_faithful
     independent_vector = eruptions
     dependent_vector = waiting
+    execute_on = FINAL
   []
 []
 
@@ -25,6 +26,14 @@
   [old_faithful]
     type = CSVReader
     csv_file = 'faithful.csv'
+    execute_on = INITIAL
+    header = true
   []
 []
-fa
+
+[Outputs]
+  [out]
+    type = SurrogateTrainerOutput
+    trainers = linear
+  []
+[]

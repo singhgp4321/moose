@@ -24,32 +24,63 @@ LinearRegressionTrainer::validParams()
       "independent_vector", "The vector name from 'input_vpp' to use as the independent variable.");
   params.addRequiredParam<std::string>(
       "dependent_vector", "The vector name from 'input_vpp' to use as the dependent variable.");
+
+  MultiMooseEnum errors("INPUT_EMPTY=1 INPUT_SIZE_MISMATCH=2 ALL=100 NONE=0", "ALL");
+  params.addParam<MultiMooseEnum>(
+      "errors", errors, "Dictate the errors to produce when performing training.");
   return params;
 }
 
 LinearRegressionTrainer::LinearRegressionTrainer(const InputParameters & parameters)
   : SurrogateTrainer(parameters),
-    _independent_variable(getVectorPostprocessorValue("input_vpp", "independent_vector")),
-    _dependent_variable(getVectorPostprocessorValue("input_vpp", "dependent_vector"))
-{
-}
-
-void
-LinearRegressionTrainer::initialSetup()
-{
-}
-
-void
-LinearRegressionTrainer::initialize()
+    _independent_variable(
+        getVectorPostprocessorValue("input_vpp", getParam<std::string>("independent_vector"))),
+    _dependent_variable(
+        getVectorPostprocessorValue("input_vpp", getParam<std::string>("dependent_vector"))),
+    _errors(getParam<MultiMooseEnum>("errors")),
+    _slope(declareModelData<Real>("slope")),
+    _intercept(declareModelData<Real>("intercept"))
 {
 }
 
 void
 LinearRegressionTrainer::execute()
 {
+  errorCheckHelper();
+
+  // Define the predictors with an Armadillo data "mat" data structure
+  // The data must be provided in rows [_dependent_variable.size(), 1], but the std::vector
+  // constructor creates a column vector.
+  arma::mat predictors(_independent_variable);
+  arma::inplace_trans(predictors);
+
+  // Define the responses with an Armadillo rowvec
+  arma::rowvec responses(_dependent_variable);
+
+  // Train the model and store the results
+  mlpack::regression::LinearRegression lr;
+  lr.Train(predictors, responses, true);
+
+  // Store the trained data
+  _slope = lr.Parameters()[0];
+  _intercept = lr.Parameters()[1];
 }
 
 void
-LinearRegressionTrainer::finalize()
+LinearRegressionTrainer::errorCheckHelper() const
 {
+  if (_errors.contains(100) || _errors.contains(1))
+  {
+    if (_independent_variable.empty())
+      paramError("independent_vector", "The independent variable data is empty.");
+    if (_dependent_variable.empty())
+      paramError("dependent_vector", "The independent variable data is empty.");
+  }
+  if (_errors.contains(100) || _errors.contains(2))
+  {
+    if (_independent_variable.size() != _independent_variable.size())
+      paramError(
+          "independent_vector",
+          "The independent variable data must be the same size as the dependent variable data.");
+  }
 }

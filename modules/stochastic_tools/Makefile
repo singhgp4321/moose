@@ -14,6 +14,21 @@ FRAMEWORK_DIR      ?= $(MOOSE_DIR)/framework
 ADDITIONAL_CPPFLAGS += -Wall -Wextra
 ###############################################################################
 
+armadillo_DIR = /Users/slauae/projects/armadillo-code
+armadillo_INCLUDE = $(armadillo_DIR)/include
+armadillo_LIB = $(armadillo_DIR)
+
+ADDITIONAL_INCLUDES += -I$(armadillo_INCLUDE) # this doesn't work
+ADDITIONAL_LIBS := -L$(armadillo_LIB) -larmadillo
+
+mlpack_DIR = /Users/slauae/projects/mlpack/install
+mlpack_INCLUDE = $(mlpack_DIR)/include
+mlpack_LIB = $(mlpack_DIR)/lib
+
+ADDITIONAL_INCLUDES += -I$(mlpack_INCLUDE) # this doesn't work
+ADDITIONAL_LIBS := -L$(mlpack_LIB) -lmlpack
+
+
 # framework
 include $(FRAMEWORK_DIR)/build.mk
 include $(FRAMEWORK_DIR)/moose.mk
@@ -55,13 +70,6 @@ include $(MODULE_DIR)/modules.mk
 #     cd mlpack
 #     mkdir build
 #     cd build
-#     cmake .. -DBUILD_PYTHON_BINDINGS=OFF -DARMADILLO_INCLUDE_DIR=/Users/slauae/projects/armadillo-code/include -DARMADILLO_LIBRARY=/Users/slauae/projects/armadillo-code -DBUILD_CLI_EXECUTABLES=OFF -DBUILD_TESTS=OFF -DCMAKE_INSTALL_PREFIX=/Users/slauae/projects/mlpack/install
+#     cmake .. -DBUILD_PYTHON_BINDINGS=OFF -DARMADILLO_INCLUDE_DIR=/Users/slauae/projects/armadillo-code/include -DARMADILLO_LIBRARY=/Users/slauae/projects/armadillo-code -DBUILD_CLI_EXECUTABLES=OFF -DBUILD_TESTS=OFF -DBUILD_JULIA_BINDING=OFF -DCMAKE_INSTALL_PREFIX=/Users/slauae/projects/mlpack/install
 #     make -j $MOOSE_JOBS
 #     make install
-
-mlpack_DIR = /Users/slauae/projects/mlpack/install
-mlpack_INCLUDE = $(mlpack_DIR)/include
-mlpack_LIB = $(mlpack_DIR)/lib
-
-#ADDITIONAL_INCLUDES += -I$(mlpack_INCLUDE) # this doesn't work
-ADDITIONAL_LIBS += -L$(mlpack_LIB) -lmlpack -I$(mlpack_INCLUDE)

@@ -28,7 +28,10 @@ ADComputeSmearedCrackingStress::validParams()
       "3 crack directions in sequence");
   params.addRequiredCoupledVar(
       "cracking_stress",
-      "The stress threshold beyond which cracking occurs. Negative values prevent cracking.");
+      "The stress threshold beyond which cracking occurs. Negative values prevent cracking. "
+      "Either 1 or 3 values must be specified. If a single value is specified, it is "
+      "used for all crack directions. If 3 are specified, they apply to the 3 crack "
+      "directions in sequence");
   MultiMooseEnum direction("x y z");
   params.addParam<MultiMooseEnum>(
       "prescribed_crack_directions", direction, "Prescribed directions of first cracks");
@@ -69,7 +72,7 @@ ADComputeSmearedCrackingStress::validParams()
 
 ADComputeSmearedCrackingStress::ADComputeSmearedCrackingStress(const InputParameters & parameters)
   : ADComputeMultipleInelasticStress(parameters),
-    _cracking_stress(adCoupledValue("cracking_stress")),
+    _cracking_stress(adCoupledValues("cracking_stress")),
     _max_cracks(getParam<unsigned int>("max_cracks")),
     _cracking_neg_fraction(getParam<Real>("cracking_neg_fraction")),
     _shear_retention_factor(getParam<Real>("shear_retention_factor")),
@@ -115,6 +118,14 @@ ADComputeSmearedCrackingStress::ADComputeSmearedCrackingStress(const InputParame
       _prescribed_crack_directions.push_back(*available_dirs.begin());
     }
   }
+  if (_cracking_stress.size() == 1)
+  {
+    _cracking_stress.push_back(_cracking_stress[0]);
+    _cracking_stress.push_back(_cracking_stress[0]);
+  }
+  else if (_cracking_stress.size() != 3)
+    paramError("cracking_stress", "Either 1 or 3 cracking stress values must be specified");
+
   if (!isParamSetByUser("cracked_elasticity_type"))
     paramWarning(
         "cracked_elasticity_type",
@@ -261,9 +272,8 @@ ADComputeSmearedCrackingStress::updateLocalElasticityTensor()
 
   bool cracking_locally_active = false;
 
-  const ADReal cracking_stress = _cracking_stress[_qp];
-
-  if (cracking_stress > 0)
+  if ((*_cracking_stress[0])[_qp] > 0 || (*_cracking_stress[1])[_qp] > 0 ||
+      (*_cracking_stress[2])[_qp] > 0)
   {
     ADRealVectorValue stiffness_ratio_local(1.0, 1.0, 1.0);
     const ADRankTwoTensor & R = _crack_rotation_old[_qp];
@@ -272,6 +282,8 @@ ADComputeSmearedCrackingStress::updateLocalElasticityTensor()
 
     for (unsigned int i = 0; i < 3; ++i)
     {
+      const ADReal cracking_stress = (*_cracking_stress[i])[_qp];
+
       // Update elasticity tensor based on crack status of the end of last time step
       if (_crack_damage_old[_qp](i) > 0.0)
       {
@@ -378,9 +390,8 @@ ADComputeSmearedCrackingStress::updateCrackingStateAndStress()
   const ADReal poissons_ratio =
       ElasticityTensorTools::getIsotropicPoissonsRatio(_elasticity_tensor[_qp]);
 
-  ADReal cracking_stress = _cracking_stress[_qp];
-
-  if (cracking_stress > 0)
+  if ((*_cracking_stress[0])[_qp] > 0 || (*_cracking_stress[1])[_qp] > 0 ||
+      (*_cracking_stress[2])[_qp] > 0)
   {
     // Initializing crack states
     _crack_rotation[_qp] = _crack_rotation_old[_qp];
@@ -420,12 +431,14 @@ ADComputeSmearedCrackingStress::updateCrackingStateAndStress()
     mooseAssert(_softening_models.size() == 3, "Must have 3 softening models");
     for (unsigned int i = 0; i < 3; ++i)
     {
+      const ADReal cracking_stress = (*_cracking_stress[i])[_qp];
+
       sigma(i) = sigmaPrime(i, i);
 
       ADReal stiffness_ratio = 1.0 - _crack_damage[_qp](i);
 
       const bool pre_existing_crack = (_crack_damage_old[_qp](i) > 0.0);
-      const bool met_stress_criterion = (sigma(i) > cracking_stress);
+      const bool met_stress_criterion = (cracking_stress > 0 && sigma(i) > cracking_stress);
       const bool loading_existing_crack = (strain_in_crack_dir(i) >= _crack_max_strain[_qp](i));
       const bool allowed_to_crack = (pre_existing_crack || num_cracks < _max_cracks);
       bool new_crack = false;

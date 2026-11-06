@@ -75,8 +75,8 @@ protected:
 
   ///@{ Input parameters for smeared crack models
 
-  /// Threshold at which cracking initiates if tensile stress exceeds it
-  const ADVariableValue & _cracking_stress;
+  /// Threshold at which cracking initiates if tensile stress exceeds it (one per crack direction)
+  std::vector<const ADVariableValue *> _cracking_stress;
 
   /// User-prescribed cracking directions
   std::vector<unsigned int> _prescribed_crack_directions;
